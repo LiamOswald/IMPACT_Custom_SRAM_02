@@ -14,20 +14,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 `default_nettype none
-/*
- *-------------------------------------------------------------
- *
- * user_project_wrapper
- *
- * This wrapper enumerates all of the pins available to the
- * user for the user project.
- *
- * An example user project is provided in this wrapper.  The
- * example should be removed and replaced with the actual
- * user project.
- *
- *-------------------------------------------------------------
- */
+
 
 module user_project_wrapper #(
     parameter BITS = 32
@@ -42,6 +29,20 @@ module user_project_wrapper #(
     inout vssd1,	// User area 1 digital ground
     inout vssd2,	// User area 2 digital ground
 `endif
+
+//IMPACT defined I/O via the GPIO pins, pin layout follows LiamOswalds design 03/22/2023
+
+// IOs
+//input [7:0] Data_In //SRAM byte input			GPIO pins 0-7
+//output [7:0] Data_Out //SRAM byte output		GPIO pins 8-15
+//input [9:0] Word_Select	//Select word from SRAM bank	GPIO pins 16-25
+//input [1:0] Bank_Select //Select SRAM Bank		GPIO pins 26 & 27
+//input [1:0] Byte_Select //Select Byte from Word		GPIO pins 28 & 29
+//input WriteEnable	//SRAM Write Enable signal	GPIO pin 30
+//input ReadEnable	//SRAM Read Enable Signal	GPIO pin 31
+//input AnalogVCC		//VCC control for Bank #4	GPIO pin 32
+//input [3:0] Truncation_Select	//Truncation controller	GPIO Pins 33-36
+//input Project_Clock	//User Project Clock 		GPIO Pin 37
 
     // Wishbone Slave ports (WB MI A)
     input wb_clk_i,
@@ -59,65 +60,54 @@ module user_project_wrapper #(
     input  [127:0] la_data_in,
     output [127:0] la_data_out,
     input  [127:0] la_oenb,
-
-    // IOs
-    input  [`MPRJ_IO_PADS-1:0] io_in,
-    output [`MPRJ_IO_PADS-1:0] io_out,
-    output [`MPRJ_IO_PADS-1:0] io_oeb,
-
+    
     // Analog (direct connection to GPIO pad---use with caution)
     // Note that analog I/O is not available on the 7 lowest-numbered
     // GPIO pads, and so the analog_io indexing is offset from the
     // GPIO indexing by 7 (also upper 2 GPIOs do not have analog_io).
     inout [`MPRJ_IO_PADS-10:0] analog_io,
-
-    // Independent clock (on independent integer divider)
-    input   user_clock2,
-
+    
     // User maskable interrupt signals
-    output [2:0] user_irq
+    output [2:0] user_irq,
+    
+    input user_clock2,
+
+
+	input [`MPRJ_IO_PADS-1:0] io_in,
+	output [`MPRJ_IO_PADS-1:0] io_out,
+	output [`MPRJ_IO_PADS-1:0] io_oeb,
+
+
+//WishBone Unused for IMPACT design -LiamOswald 03/22/2023
+ 
+//Logic Analyzer Unused for IMPACT design -LiamOswald 03/22/2023
+
 );
 
 /*--------------------------------------*/
 /* User project is instantiated  here   */
 /*--------------------------------------*/
 
-user_proj_example mprj (
+
+user_proj_IMPACT_HEAD mprj (
 `ifdef USE_POWER_PINS
 	.vccd1(vccd1),	// User area 1 1.8V power
 	.vssd1(vssd1),	// User area 1 digital ground
 `endif
 
-    .wb_clk_i(wb_clk_i),
-    .wb_rst_i(wb_rst_i),
-
-    // MGMT SoC Wishbone Slave
-
-    .wbs_cyc_i(wbs_cyc_i),
-    .wbs_stb_i(wbs_stb_i),
-    .wbs_we_i(wbs_we_i),
-    .wbs_sel_i(wbs_sel_i),
-    .wbs_adr_i(wbs_adr_i),
-    .wbs_dat_i(wbs_dat_i),
-    .wbs_ack_o(wbs_ack_o),
-    .wbs_dat_o(wbs_dat_o),
-
-    // Logic Analyzer
-
-    .la_data_in(la_data_in),
-    .la_data_out(la_data_out),
-    .la_oenb (la_oenb),
-
     // IO Pads
+    .io_oeb(io_oeb [37:5]),
+    .user_irq(user_irq), 
+    .Data_In(io_in[12:5]),			//SRAM byte input		GPIO pins 5-12
+    .Data_Out(io_out[20:13]), 			//SRAM byte output		GPIO pins 13-20
+    .Word_Select(io_in[21:30]), 		//Select word from SRAM bank	GPIO pins 21-30
+    .Byte_Select(io_in[31:32]),			//Select Byte from Word		GPIO pins 31 & 32
+    .WriteEnable(io_in[33]),			//SRAM Write Enable signal	GPIO pin 33
+    .ReadEnable(io_in[34]),			//SRAM Read Enable Signal	GPIO pin 34
+    .WL_enable(io_in[35]),			//SRAM world line enable 	GPIO pin 35
+    .PreCharge(io_in[36]),			//SRAM precharge enable bar	GPIO pin 36
+    .clk(io_in[37]),				//User Project Clock 		GPIO Pin 37	
 
-    .io_in ({io_in[37:30],io_in[7:0]}),
-    .io_out({io_out[37:30],io_out[7:0]}),
-    .io_oeb({io_oeb[37:30],io_oeb[7:0]}),
-
-    // IRQ
-    .irq(user_irq)
 );
 
 endmodule	// user_project_wrapper
-
-`default_nettype wire
